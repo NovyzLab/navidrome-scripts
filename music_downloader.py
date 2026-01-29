@@ -6,6 +6,9 @@ import yt_dlp
 import sys
 import argparse
 import re
+import tempfile
+import uuid
+from datetime import datetime
 from typing import List, Dict, Optional
 import subprocess
 import asyncio
@@ -161,13 +164,14 @@ def clean_youtube_title(title: str) -> tuple[str, str]:
     return artist, song_title
 
 
-async def download_from_deezer_bot(artist: str, song_title: str) -> Optional[str]:
+async def download_from_deezer_bot(artist: str, song_title: str, download_dir: str) -> Optional[str]:
     """
     Connects to Telegram, searches for a song via the bot, and downloads it.
     
     Args:
         artist: The name of the artist.
         song_title: The title of the song.
+        download_dir: The directory to download the song to.
     
     Returns:
         The path to the downloaded file, or None if the download failed.
@@ -251,7 +255,7 @@ async def download_from_deezer_bot(artist: str, song_title: str) -> Optional[str
                         break
                 
                 if file_name:
-                    file_path = os.path.join(DOWNLOAD_DIR, file_name)
+                    file_path = os.path.join(download_dir, file_name)
                     await client.download_media(message, file=file_path)
                     downloaded = True
                     print("Download complete.")
@@ -457,6 +461,12 @@ def main():
     
     # Initialize a flag to track if any songs were downloaded
     songs_downloaded = False
+    
+    # Create a temporary folder for this download session
+    session_id = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + str(uuid.uuid4())[:8]
+    temp_download_dir = os.path.join(DOWNLOAD_DIR, f"session_{session_id}")
+    os.makedirs(temp_download_dir, exist_ok=True)
+    print(f"Created temporary download folder: {temp_download_dir}")
         
     for song in new_songs:
         artist = song['artist']
@@ -473,7 +483,7 @@ def main():
             
         try:
             # First, always try to download from the Deezer bot.
-            file_path = asyncio.run(download_from_deezer_bot(artist, title))
+            file_path = asyncio.run(download_from_deezer_bot(artist, title, temp_download_dir))
             
             if file_path:
                 print(f"Successfully downloaded '{song_key}' from Deezer bot.")
@@ -500,10 +510,16 @@ def main():
         
     # After all downloads are complete, run the metadata cleaner script only if songs were downloaded
     if songs_downloaded:
-        print("All downloads complete. Running metadata_cleaner.py...")
-        subprocess.run(['/usr/bin/python3', 'post_download.py'])
+        print(f"All downloads complete. Running post_download.py for: {temp_download_dir}")
+        subprocess.run(['/usr/bin/python3', 'post_download.py', '--source-dir', temp_download_dir])
     else:
         print("No new songs were downloaded. Skipping metadata cleanup.")
+        # Clean up the empty temp folder if no songs were downloaded
+        try:
+            os.rmdir(temp_download_dir)
+            print(f"Removed empty temp folder: {temp_download_dir}")
+        except OSError:
+            pass  # Folder not empty or already removed
 
 
 if __name__ == "__main__":

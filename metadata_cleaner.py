@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import shutil
+import argparse
 from typing import List, Dict, Optional
 
 try:
@@ -102,10 +103,16 @@ def main():
     Processes all new files in the incoming folder , cleans metadata,
     and /moves them to the main library/ ==> runs lyrics finder instead.
     """
-    print(f"Starting metadata cleaner for '{INCOMING_DIR}'...")
+    parser = argparse.ArgumentParser(description='Clean metadata from audio files.')
+    parser.add_argument('--source-dir', default=INCOMING_DIR,
+                        help=f'Source directory containing audio files (default: {INCOMING_DIR})')
+    args = parser.parse_args()
+
+    source_dir = args.source_dir
+    print(f"Starting metadata cleaner for '{source_dir}'...")
     processed = 0
 
-    for root, _, files in os.walk(INCOMING_DIR):
+    for root, _, files in os.walk(source_dir):
         for file in files:
             if not file.lower().endswith(('.mp3', '.flac', '.m4a')):
                 continue

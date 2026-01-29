@@ -1,14 +1,17 @@
 import os
+import argparse
 import requests
 from mutagen import File as MutagenFile
 
+# Import paths from config
+from config import INCOMING_DIR, MUSIC_DIR, LYRICS_DIR
+
 LRCLIB_ENDPOINT = "https://lrclib.net/api/get"
 
-staging_dir = "/opt/navidrome/incoming"
-music_dir = "/opt/navidrome/music"
-lyrics_dir = "/opt/navidrome/lyrics"
+# Default staging directory from config
+DEFAULT_STAGING_DIR = INCOMING_DIR
 
-def fetch_synced_lyrics(file_path):
+def fetch_synced_lyrics(file_path, lyrics_dir=LYRICS_DIR, music_dir=MUSIC_DIR):
     base = os.path.splitext(os.path.basename(file_path))[0]
 
     # permanent storage
@@ -96,7 +99,20 @@ def fetch_synced_lyrics(file_path):
     print(f"Lyrics saved for {base}")
 
 
-# process staging folder
-for file in os.listdir(staging_dir):
-    if file.lower().endswith((".mp3", ".flac")):
-        fetch_synced_lyrics(os.path.join(staging_dir, file))
+def main():
+    parser = argparse.ArgumentParser(description='Fetch and save lyrics for audio files.')
+    parser.add_argument('--source-dir', default=DEFAULT_STAGING_DIR,
+                        help=f'Source directory containing audio files (default: {DEFAULT_STAGING_DIR})')
+    args = parser.parse_args()
+
+    source_dir = args.source_dir
+    print(f"Processing lyrics for files in: {source_dir}")
+
+    # process source folder
+    for file in os.listdir(source_dir):
+        if file.lower().endswith((".mp3", ".flac")):
+            fetch_synced_lyrics(os.path.join(source_dir, file))
+
+
+if __name__ == "__main__":
+    main()

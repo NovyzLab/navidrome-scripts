@@ -5,6 +5,7 @@ import yt_dlp
 import sys
 import argparse
 import subprocess
+import uuid
 from typing import List, Dict
 import re
 from datetime import datetime
@@ -105,10 +106,10 @@ def add_metadata(filepath: str, artist: str, title: str, thumbnail_path: str, up
         return False
 
 
-def download_from_youtube(artist: str, song_title: str, youtube_url: str):
+def download_from_youtube(artist: str, song_title: str, youtube_url: str, download_dir: str):
     print(f"Downloading '{artist} - {song_title}'...")
-    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-    output_template = os.path.join(DOWNLOAD_DIR, f'%(title)s.%(ext)s')
+    os.makedirs(download_dir, exist_ok=True)
+    output_template = os.path.join(download_dir, f'%(title)s.%(ext)s')
     ydl_opts = {
         'format': 'bestaudio/best',
         'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}],
@@ -148,6 +149,12 @@ def main():
         sys.exit(0)
 
     songs_downloaded = False
+    
+    # Create a temporary folder for this download session
+    session_id = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + str(uuid.uuid4())[:8]
+    temp_download_dir = os.path.join(DOWNLOAD_DIR, f"session_{session_id}")
+    os.makedirs(temp_download_dir, exist_ok=True)
+    print(f"Created temporary download folder: {temp_download_dir}")
 
     for song in new_songs:
         song_id = song['youtube_url']
@@ -155,7 +162,7 @@ def main():
             print(f"Skipping already downloaded: {song['artist']} - {song['title']}")
             continue
 
-        success = download_from_youtube(song['artist'], song['title'], song_id)
+        success = download_from_youtube(song['artist'], song['title'], song_id, temp_download_dir)
         if success:
             songs_downloaded = True
             downloaded_songs[song_id] = {
@@ -168,12 +175,18 @@ def main():
         print("-" * 20)
         time.sleep(3)
 
-    # After all downloads are complete, run the metadata cleaner script only if songs were downloaded
+    # After all downloads are complete, run the post-processing script only if songs were downloaded
     if songs_downloaded:
-        print("All downloads complete. Running metadata_cleaner.py...")
-        subprocess.run(['/usr/bin/python3', 'post_download.py'])
+        print(f"All downloads complete. Running post_download.py for: {temp_download_dir}")
+        subprocess.run(['/usr/bin/python3', 'post_download.py', '--source-dir', temp_download_dir])
     else:
         print("No new songs were downloaded. Skipping metadata cleanup.")
+        # Clean up the empty temp folder if no songs were downloaded
+        try:
+            os.rmdir(temp_download_dir)
+            print(f"Removed empty temp folder: {temp_download_dir}")
+        except OSError:
+            pass  # Folder not empty or already removed
 
 
 if __name__ == "__main__":
