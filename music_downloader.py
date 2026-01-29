@@ -24,16 +24,18 @@ except ImportError:
     print("Error: Mutagen library not found. Please install it with 'pip install mutagen' to run this script.")
     exit(1)
 
-# --- Configuration ---
-FAILED_SONGS_FILE = 'failed_songs.json'
-PROCESSED_SONGS_FILE = 'processed_songs.json'
-DOWNLOAD_DIR = '/opt/navidrome/incoming/'
-USER_AGENT = "MusicDownloadScript/1.0 ( dispeis8431@gmail.com )"
-DEEZER_BOT_USERNAME = '@deezload2bot'
-#Telegram API stuff
-API_ID = '25884693' 
-API_HASH = 'c3f8815e161d19a349b5911da5bef41e'
-SESSION_NAME = 'deezer_music_downloader'
+# --- Configuration from .env ---
+from config import (
+    FAILED_SONGS_FILE,
+    PROCESSED_SONGS_FILE,
+    DOWNLOAD_DIR,
+    USER_AGENT,
+    DEEZER_BOT_USERNAME,
+    TG_API_ID as API_ID,
+    TG_API_HASH as API_HASH,
+    TG_SESSION_NAME as SESSION_NAME,
+    validate_telegram_config
+)
 
 # Custom exception for handling songs not found on Deezer
 class SongNotFoundOnDeezerError(Exception):
@@ -449,9 +451,8 @@ def main():
     # Get the list of songs already in the download directory
     processed_songs = load_processed_songs()
     
-    # Check for environment variables
-    if not API_ID or not API_HASH:
-        print("Error: Missing TG_API_ID or TG_API_HASH environment variables. Please set them in the script.")
+    # Check for Telegram credentials in .env
+    if not validate_telegram_config():
         sys.exit(1)
     
     # Initialize a flag to track if any songs were downloaded

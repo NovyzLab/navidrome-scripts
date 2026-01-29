@@ -2,6 +2,8 @@ import os
 import requests
 from mutagen import File as MutagenFile
 
+from config import MUSIC_DIR, LYRICS_DIR
+
 LRCLIB_ENDPOINT = "https://lrclib.net/api/get"
 
 def fetch_synced_lyrics(file_path, lyrics_dir):
@@ -81,11 +83,8 @@ def fetch_synced_lyrics(file_path, lyrics_dir):
     print(f"Lyrics saved: {base}")
 
 
-music_dir = "/opt/navidrome/music"
-lyrics_dir = "/opt/navidrome/lyrics"
-
-for file in os.listdir(music_dir):
+for file in os.listdir(MUSIC_DIR):
     if file.lower().endswith((".mp3", ".flac")):
-        fetch_synced_lyrics(os.path.join(music_dir, file), lyrics_dir)
+        fetch_synced_lyrics(os.path.join(MUSIC_DIR, file), LYRICS_DIR)
 
 

@@ -9,9 +9,8 @@ from typing import List, Dict
 import re
 from datetime import datetime
 
-# --- Configuration ---
-DOWNLOAD_DIR = '/opt/navidrome/incoming/'
-DOWNLOADED_FILE = 'yt_downloaded.json'
+# --- Configuration from .env ---
+from config import INCOMING_DIR as DOWNLOAD_DIR, DOWNLOADED_FILE
 
 
 # --- Helper Functions ---

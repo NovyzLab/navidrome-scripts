@@ -1,0 +1,19 @@
+# Environment files with secrets
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Session files (contain auth tokens)
+*.session
+*.session-journal
+
+# Byte-compiled / optimized / DLL files
+*.pyc
+
+# State/tracking files (optional - remove if you want to track these)
+# failed_songs.json
+# processed_songs.json
+# yt_downloaded.json

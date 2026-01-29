@@ -1,0 +1,20 @@
+# Navidrome Scripts Dependencies
+# Install with: pip install -r requirements.txt
+
+# Environment variable management
+python-dotenv>=1.0.0
+
+# YouTube downloading
+yt-dlp>=2024.1.0
+
+# Audio metadata handling
+mutagen>=1.47.0
+
+# HTTP requests
+requests>=2.31.0
+
+# Telegram API client (for Deezer bot integration)
+telethon>=1.34.0
+
+# ListenBrainz API client (optional, for ListenBrainz integration)
+pylistenbrainz>=0.5.0

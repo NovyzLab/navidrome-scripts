@@ -8,8 +8,8 @@ from typing import List, Dict
 import re
 from datetime import datetime
 
-# --- Configuration ---
-DOWNLOAD_DIR = '/opt/navidrome/music/'
+# --- Configuration from .env ---
+from config import MUSIC_DIR as DOWNLOAD_DIR
 
 # --- Functions ---
 

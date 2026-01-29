@@ -12,8 +12,8 @@ except ImportError:
     print("Error: Mutagen library not found. Please install it with 'pip install mutagen' to run this script.")
     sys.exit(1)
 
-# --- Configuration ---
-DOWNLOAD_DIR = '/opt/navidrome/music/'
+# --- Configuration from .env ---
+from config import MUSIC_DIR as DOWNLOAD_DIR
 
 def update_and_clean_metadata(file_path: str):
     """

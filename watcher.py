@@ -5,13 +5,12 @@ import sys
 import os
 import random
 
-# --- Configuration ---
-# Paths to your downloader scripts
-MAIN_DOWNLOADER_SCRIPT = "/root/scripts/music_downloader.py"
-YT_DOWNLOADER_SCRIPT = "/root/scripts/yt_downloader2.py"
-
-# The interval (in seconds) to check for new songs
-CHECK_INTERVAL_SECONDS = 15
+# --- Configuration from .env ---
+from config import (
+    MAIN_DOWNLOADER_SCRIPT,
+    YT_DOWNLOADER_SCRIPT,
+    CHECK_INTERVAL_SECONDS
+)
 
 def run_downloader(name, command):
     """Helper function to execute a downloader command with consistent logging."""

@@ -13,9 +13,8 @@ except ImportError:
     print("Error: Mutagen library not found. Please install it with 'pip install mutagen'")
     sys.exit(1)
 
-# --- Configuration ---
-INCOMING_DIR = '/opt/navidrome/incoming/'
-LIBRARY_DIR = '/opt/navidrome/music/'
+# --- Configuration from .env ---
+from config import INCOMING_DIR, LIBRARY_DIR
 
 def update_and_clean_metadata(file_path: str):
     """
