@@ -45,7 +45,16 @@ DEEZER_BOT_USERNAME = os.getenv('DEEZER_BOT_USERNAME', '@deezload2bot')
 # ===================
 MAIN_DOWNLOADER_SCRIPT = os.getenv('MAIN_DOWNLOADER_SCRIPT', '/root/scripts/music_downloader.py')
 YT_DOWNLOADER_SCRIPT = os.getenv('YT_DOWNLOADER_SCRIPT', '/root/scripts/yt_downloader2.py')
+SC_DOWNLOADER_SCRIPT = os.getenv('SC_DOWNLOADER_SCRIPT', '/root/scripts/sc_downloader.py')
 CHECK_INTERVAL_SECONDS = int(os.getenv('CHECK_INTERVAL_SECONDS', '15'))
+
+# ===================
+# Playlist URLs (for watcher.py)
+# ===================
+YOUTUBE_PLAYLIST_URL = os.getenv('YOUTUBE_PLAYLIST_URL', '')
+LISTENBRAINZ_PLAYLIST_URL = os.getenv('LISTENBRAINZ_PLAYLIST_URL', '')
+YT2_PLAYLIST_URL = os.getenv('YT2_PLAYLIST_URL', '')
+SOUNDCLOUD_PLAYLIST_URL = os.getenv('SOUNDCLOUD_PLAYLIST_URL', '')
 
 # ===================
 # Miscellaneous
