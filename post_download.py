@@ -27,7 +27,8 @@ def main():
 
     subprocess.run(['/usr/bin/python3', 'lyrics_staging.py', '--source-dir', source_dir])
 
-    extensions = (".mp3", ".flac")
+    # Support multiple audio formats
+    extensions = (".mp3", ".flac", ".opus", ".m4a", ".ogg", ".wav", ".aiff", ".aac")
 
     for file in os.listdir(source_dir):
         if file.lower().endswith(extensions):

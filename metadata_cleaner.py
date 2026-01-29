@@ -114,7 +114,8 @@ def main():
 
     for root, _, files in os.walk(source_dir):
         for file in files:
-            if not file.lower().endswith(('.mp3', '.flac', '.m4a')):
+            # Support multiple audio formats
+            if not file.lower().endswith(('.mp3', '.flac', '.m4a', '.opus', '.ogg', '.wav', '.aiff', '.aac')):
                 continue
 
             file_path = os.path.join(root, file)

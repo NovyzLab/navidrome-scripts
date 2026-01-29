@@ -108,9 +108,10 @@ def main():
     source_dir = args.source_dir
     print(f"Processing lyrics for files in: {source_dir}")
 
-    # process source folder
+    # process source folder - support multiple audio formats
+    audio_extensions = (".mp3", ".flac", ".opus", ".m4a", ".ogg", ".wav", ".aiff", ".aac")
     for file in os.listdir(source_dir):
-        if file.lower().endswith((".mp3", ".flac")):
+        if file.lower().endswith(audio_extensions):
             fetch_synced_lyrics(os.path.join(source_dir, file))
 
 
