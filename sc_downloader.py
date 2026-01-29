@@ -68,61 +68,80 @@ def get_songs_from_soundcloud(url: str) -> List[Dict]:
     """
     print(f"Fetching songs from SoundCloud: {url}...")
     try:
+        # Don't use extract_flat for playlists - we need full metadata
         ydl_opts = {
-            'extract_flat': 'in_playlist',
             'quiet': True,
             'no_warnings': True,
+            'extract_flat': False,  # Get full metadata
+            'skip_download': True,  # Don't download, just extract info
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
         
         songs = []
         
-        # Handle single track
-        if info.get('_type') != 'playlist':
-            artist = info.get('uploader', 'Unknown Artist')
-            title = clean_title(info.get('title', 'Unknown Title'))
+        def extract_song_info(entry):
+            """Extract artist and title from a track entry."""
+            if not entry:
+                return None
+            
+            # Get the uploader (artist) - try multiple fields
+            artist = (
+                entry.get('artist') or 
+                entry.get('uploader') or 
+                entry.get('creator') or 
+                entry.get('channel') or
+                'Unknown Artist'
+            )
+            
+            # Get the title
+            original_title = entry.get('title', 'Unknown Title')
             
             # Try to extract artist from title if it contains " - "
-            if ' - ' in info.get('title', ''):
-                parts = info.get('title', '').split(' - ', 1)
-                artist = parts[0].strip()
-                title = clean_title(parts[1])
+            # Common formats: "Artist - Title" or "Artist - Title (feat. Someone)"
+            if ' - ' in original_title and artist in ['Unknown Artist', entry.get('uploader', '')]:
+                parts = original_title.split(' - ', 1)
+                # Only use the split if the first part looks like an artist name
+                if len(parts[0]) < 50:  # Artist names are usually short
+                    artist = parts[0].strip()
+                    original_title = parts[1].strip()
             
-            songs.append({
+            title = clean_title(original_title)
+            
+            # Get the URL and ID
+            track_url = entry.get('webpage_url') or entry.get('url') or ''
+            track_id = entry.get('id') or track_url
+            
+            if not track_url or title == 'Unknown Title':
+                return None
+            
+            return {
                 'artist': artist,
                 'title': title,
-                'url': info.get('webpage_url', url),
-                'id': info.get('id', url)
-            })
+                'url': track_url,
+                'id': str(track_id)
+            }
+        
+        # Handle single track vs playlist
+        if info.get('_type') == 'playlist' or 'entries' in info:
+            # It's a playlist
+            entries = info.get('entries', [])
+            for entry in entries:
+                song_info = extract_song_info(entry)
+                if song_info:
+                    songs.append(song_info)
         else:
-            # Handle playlist or user tracks
-            if 'entries' in info:
-                for entry in info['entries']:
-                    if not entry:
-                        continue
-                    
-                    artist = entry.get('uploader', 'Unknown Artist')
-                    original_title = entry.get('title', 'Unknown Title')
-                    title = clean_title(original_title)
-                    
-                    # Try to extract artist from title if it contains " - "
-                    if ' - ' in original_title:
-                        parts = original_title.split(' - ', 1)
-                        artist = parts[0].strip()
-                        title = clean_title(parts[1])
-                    
-                    songs.append({
-                        'artist': artist,
-                        'title': title,
-                        'url': entry.get('url', entry.get('webpage_url', '')),
-                        'id': entry.get('id', entry.get('url', ''))
-                    })
+            # Single track
+            song_info = extract_song_info(info)
+            if song_info:
+                songs.append(song_info)
         
         print(f"Found {len(songs)} songs from SoundCloud.")
         return songs
     except Exception as e:
         print(f"An error occurred while fetching from SoundCloud: {e}")
+        import traceback
+        traceback.print_exc()
         return []
 
 
