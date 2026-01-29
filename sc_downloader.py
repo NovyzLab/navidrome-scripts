@@ -148,61 +148,111 @@ def get_songs_from_soundcloud(url: str) -> List[Dict]:
 def add_metadata(filepath: str, artist: str, title: str, thumbnail_path: str = None):
     """
     Adds artist, title, and cover art metadata to an audio file.
+    Supports MP3, FLAC, M4A, and other formats via mutagen.
     """
     try:
+        from mutagen import File as MutagenFile
         from mutagen.mp3 import MP3
+        from mutagen.flac import FLAC, Picture
+        from mutagen.mp4 import MP4, MP4Cover
         from mutagen.id3 import ID3, TPE1, TIT2, TALB, APIC
     except ImportError:
         print("The 'mutagen' library is not installed. Skipping metadata tagging.")
         return False
-        
+    
+    ext = os.path.splitext(filepath)[1].lower()
+    
     try:
-        audio = MP3(filepath, ID3=ID3)
-        
-        # Add ID3 tag if it doesn't exist
-        try:
-            audio.add_tags()
-        except:
-            pass  # Tags already exist
-        
-        # Add basic text tags
-        audio.tags.add(TPE1(encoding=3, text=artist))
-        audio.tags.add(TIT2(encoding=3, text=title))
-        audio.tags.add(TALB(encoding=3, text=title))  # Set album name to the song title
-
-        # Add the cover art if available
+        # Read thumbnail data if available
+        thumbnail_data = None
+        thumbnail_mime = 'image/jpeg'
         if thumbnail_path and os.path.exists(thumbnail_path):
-            # Determine mime type based on extension
-            ext = os.path.splitext(thumbnail_path)[1].lower()
-            mime_type = 'image/jpeg'
-            if ext == '.png':
-                mime_type = 'image/png'
-            elif ext == '.webp':
-                mime_type = 'image/webp'
+            thumb_ext = os.path.splitext(thumbnail_path)[1].lower()
+            if thumb_ext == '.png':
+                thumbnail_mime = 'image/png'
+            elif thumb_ext == '.webp':
+                thumbnail_mime = 'image/webp'
+            with open(thumbnail_path, 'rb') as f:
+                thumbnail_data = f.read()
+        
+        if ext == '.mp3':
+            audio = MP3(filepath, ID3=ID3)
+            try:
+                audio.add_tags()
+            except:
+                pass
+            audio.tags.add(TPE1(encoding=3, text=artist))
+            audio.tags.add(TIT2(encoding=3, text=title))
+            audio.tags.add(TALB(encoding=3, text=title))
+            if thumbnail_data:
+                audio.tags.add(APIC(encoding=3, mime=thumbnail_mime, type=3, desc='Cover', data=thumbnail_data))
+            audio.save()
             
-            with open(thumbnail_path, 'rb') as thumbnail_file:
-                audio.tags.add(
-                    APIC(
-                        encoding=3,
-                        mime=mime_type,
-                        type=3,  # Front cover
-                        desc=u'Cover',
-                        data=thumbnail_file.read()
-                    )
-                )
+        elif ext == '.flac':
+            audio = FLAC(filepath)
+            audio['artist'] = artist
+            audio['title'] = title
+            audio['album'] = title
+            if thumbnail_data:
+                pic = Picture()
+                pic.type = 3  # Front cover
+                pic.mime = thumbnail_mime
+                pic.desc = 'Cover'
+                pic.data = thumbnail_data
+                audio.add_picture(pic)
+            audio.save()
+            
+        elif ext in ['.m4a', '.mp4', '.aac']:
+            audio = MP4(filepath)
+            audio['\xa9ART'] = [artist]
+            audio['\xa9nam'] = [title]
+            audio['\xa9alb'] = [title]
+            if thumbnail_data:
+                # MP4 cover art format
+                if thumbnail_mime == 'image/png':
+                    cover_format = MP4Cover.FORMAT_PNG
+                else:
+                    cover_format = MP4Cover.FORMAT_JPEG
+                audio['covr'] = [MP4Cover(thumbnail_data, imageformat=cover_format)]
+            audio.save()
+            
+        elif ext in ['.opus', '.ogg']:
+            # Use generic easy interface for Ogg formats
+            audio = MutagenFile(filepath, easy=True)
+            if audio is not None:
+                audio['artist'] = artist
+                audio['title'] = title
+                audio['album'] = title
+                audio.save()
+            
+        else:
+            # Try generic mutagen file
+            audio = MutagenFile(filepath, easy=True)
+            if audio is not None:
+                audio['artist'] = artist
+                audio['title'] = title
+                audio['album'] = title
+                audio.save()
+            else:
+                print(f"Unsupported format for metadata: {ext}")
+                return False
+        
+        if thumbnail_data:
             print(f"Embedded cover art from '{os.path.basename(thumbnail_path)}'.")
-
-        audio.save()
         print(f"Added metadata to '{os.path.basename(filepath)}'.")
         return True
+        
     except Exception as e:
         print(f"Error adding metadata: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
 def download_from_soundcloud(artist: str, song_title: str, url: str, download_dir: str):
     """
-    Downloads the audio from a SoundCloud URL and adds metadata.
+    Downloads the audio from a SoundCloud URL with best quality.
+    Tries to get original file first (could be lossless), falls back to best stream.
     """
     print(f"Downloading '{artist} - {song_title}'...")
     os.makedirs(download_dir, exist_ok=True)
@@ -211,38 +261,71 @@ def download_from_soundcloud(artist: str, song_title: str, url: str, download_di
     safe_title = re.sub(r'[<>:"/\\|?*]', '', f"{artist} - {song_title}")
     output_template = os.path.join(download_dir, f'{safe_title}.%(ext)s')
     
+    # Try to get original file first (highest quality)
+    # Format selection priority:
+    # 1. original (lossless if available)
+    # 2. best audio quality stream
     ydl_opts = {
+        # Prefer original file, then best audio
         'format': 'bestaudio/best',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
         'outtmpl': output_template,
         'retries': 5,
         'quiet': True,
         'no_warnings': True,
         'writethumbnail': True,
+        # Post-processors: only convert if needed for compatibility
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            # Prefer keeping original format, but ensure compatibility
+            'preferredcodec': 'best',  # Keep original codec if possible
+            'preferredquality': '0',   # 0 = best quality / no re-encoding
+        }],
+        # Additional options for best quality
+        'prefer_free_formats': True,
     }
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-            mp3_filename = os.path.splitext(filename)[0] + '.mp3'
+            
+            # Get the actual downloaded filename
+            # yt-dlp might change extension based on format
+            base_filename = os.path.splitext(ydl.prepare_filename(info))[0]
+            
+            # Find the actual downloaded file (could be various extensions)
+            actual_file = None
+            for ext in ['.flac', '.wav', '.aiff', '.opus', '.m4a', '.mp3', '.ogg', '.webm']:
+                potential_file = base_filename + ext
+                if os.path.exists(potential_file):
+                    actual_file = potential_file
+                    break
+            
+            if not actual_file:
+                # Fallback: look for any audio file with the base name
+                for f in os.listdir(download_dir):
+                    if f.startswith(os.path.basename(base_filename)) and not f.endswith(('.webp', '.jpg', '.jpeg', '.png')):
+                        actual_file = os.path.join(download_dir, f)
+                        break
+            
+            if not actual_file:
+                print(f"Warning: Could not find downloaded file for '{song_title}'")
+                return False
+            
+            # Get file info for logging
+            file_ext = os.path.splitext(actual_file)[1]
+            file_size = os.path.getsize(actual_file) / (1024 * 1024)  # MB
+            print(f"Downloaded: {os.path.basename(actual_file)} ({file_size:.1f} MB, format: {file_ext})")
             
             # Find the thumbnail
             thumbnail_path = None
             for ext in ['.webp', '.jpg', '.jpeg', '.png']:
-                potential_thumb = os.path.splitext(filename)[0] + ext
+                potential_thumb = base_filename + ext
                 if os.path.exists(potential_thumb):
                     thumbnail_path = potential_thumb
                     break
         
-        print(f"Successfully downloaded '{song_title}'.")
-        
         # Add metadata and cover art to the downloaded file
-        add_metadata(mp3_filename, artist, song_title, thumbnail_path)
+        add_metadata(actual_file, artist, song_title, thumbnail_path)
         
         # Clean up the downloaded thumbnail file
         if thumbnail_path and os.path.exists(thumbnail_path):
@@ -251,6 +334,8 @@ def download_from_soundcloud(artist: str, song_title: str, url: str, download_di
         return True
     except Exception as e:
         print(f"Download failed: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
