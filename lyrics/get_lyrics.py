@@ -1,6 +1,10 @@
 import os
+import sys
 import requests
 from mutagen import File as MutagenFile
+
+# Add parent directory to path to import config
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import MUSIC_DIR, LYRICS_DIR
 

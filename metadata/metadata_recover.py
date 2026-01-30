@@ -4,6 +4,9 @@ import sys
 import json
 from typing import List, Dict, Optional
 
+# Add parent directory to path to import config
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 try:
     from mutagen.easyid3 import EasyID3
     from mutagen.flac import FLAC
@@ -13,8 +16,8 @@ except ImportError:
     print("Error: Mutagen library not found. Please install it with 'pip install mutagen' to run this script.")
     sys.exit(1)
 
-# --- Configuration ---
-DOWNLOAD_DIR = '/opt/navidrome/music/'
+# --- Configuration from .env ---
+from config import MUSIC_DIR as DOWNLOAD_DIR
 
 def strip_and_apply_metadata(file_path: str, artist: str, title: str):
     """

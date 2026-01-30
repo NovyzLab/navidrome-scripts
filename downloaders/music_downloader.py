@@ -4,6 +4,9 @@ import os
 import time
 import yt_dlp
 import sys
+
+# Add parent directory to path to import config
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import argparse
 import re
 import tempfile

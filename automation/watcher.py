@@ -5,6 +5,9 @@ import sys
 import os
 import random
 
+# Add parent directory to path to import config
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 # --- Configuration from .env ---
 from config import (
     MAIN_DOWNLOADER_SCRIPT,

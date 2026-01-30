@@ -13,7 +13,13 @@ __pycache__/
 # Byte-compiled / optimized / DLL files
 *.pyc
 
-# State/tracking files (optional - remove if you want to track these)
-# failed_songs.json
-# processed_songs.json
-# yt_downloaded.json
+# Data files (state tracking)
+data/*.json
+data/*.session
+!data/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

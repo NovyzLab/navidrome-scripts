@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 import argparse
 import sys
+import os
 import time
 import asyncio
 
-# Import functions and configs from your main script
+# Add parent directory to path to import config
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import functions and configs from the main script in same directory
 from music_downloader import (
     download_from_deezer_bot,
     SongNotFoundOnDeezerError,
@@ -12,6 +16,7 @@ from music_downloader import (
     load_processed_songs,
     save_processed_songs,
 )
+from config import DOWNLOAD_DIR
 
 
 def main():

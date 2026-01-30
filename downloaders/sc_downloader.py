@@ -15,12 +15,14 @@ from typing import List, Dict
 import re
 from datetime import datetime
 
-# --- Configuration from .env ---
-from config import INCOMING_DIR as DOWNLOAD_DIR
+# Add parent directory to path to import config
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Tracking file for downloaded SoundCloud tracks
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-SC_DOWNLOADED_FILE = os.path.join(SCRIPT_DIR, 'sc_downloaded.json')
+# --- Configuration from .env ---
+from config import INCOMING_DIR as DOWNLOAD_DIR, _data_dir
+
+# Tracking file for downloaded SoundCloud tracks (stored in data directory)
+SC_DOWNLOADED_FILE = str(_data_dir / 'sc_downloaded.json')
 
 
 # --- Helper Functions ---

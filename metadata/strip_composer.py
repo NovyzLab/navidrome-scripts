@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 import os
+import sys
 from mutagen import File
 
-MUSIC_DIR = "/opt/navidrome/music/"  # adjust to your actual path
+# Add parent directory to path to import config
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from config import MUSIC_DIR
 
 def strip_composer_tags():
     for root, _, files in os.walk(MUSIC_DIR):

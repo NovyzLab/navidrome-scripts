@@ -62,12 +62,14 @@ SOUNDCLOUD_PLAYLIST_URL = os.getenv('SOUNDCLOUD_PLAYLIST_URL', '')
 USER_AGENT = os.getenv('USER_AGENT', 'MusicDownloadScript/1.0')
 
 # ===================
-# File paths for tracking state
+# File paths for tracking state (stored in data/ subdirectory)
 # ===================
 _script_dir = Path(__file__).parent
-FAILED_SONGS_FILE = str(_script_dir / 'failed_songs.json')
-PROCESSED_SONGS_FILE = str(_script_dir / 'processed_songs.json')
-DOWNLOADED_FILE = str(_script_dir / 'yt_downloaded.json')
+_data_dir = _script_dir / 'data'
+FAILED_SONGS_FILE = str(_data_dir / 'failed_songs.json')
+PROCESSED_SONGS_FILE = str(_data_dir / 'processed_songs.json')
+DOWNLOADED_FILE = str(_data_dir / 'yt_downloaded.json')
+TG_SESSION_PATH = str(_data_dir / TG_SESSION_NAME)
 
 
 def validate_telegram_config():

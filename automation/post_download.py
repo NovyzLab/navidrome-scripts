@@ -1,11 +1,18 @@
 import subprocess
 import os
+import sys
 import shutil
 import time
 import argparse
 
+# Add parent directory to path to import config
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 # Import paths from config
 from config import INCOMING_DIR, MUSIC_DIR
+
+# Get the project root directory for finding other scripts
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Default staging directory from config
 DEFAULT_STAGING_DIR = INCOMING_DIR
@@ -22,10 +29,13 @@ def main():
 
     time.sleep(1)
 
-    # Pass the source directory to the sub-scripts
-    subprocess.run(['/usr/bin/python3', 'metadata_cleaner.py', '--source-dir', source_dir])
+    # Pass the source directory to the sub-scripts (using absolute paths)
+    metadata_cleaner = os.path.join(PROJECT_ROOT, 'metadata', 'metadata_cleaner.py')
+    lyrics_staging = os.path.join(PROJECT_ROOT, 'lyrics', 'lyrics_staging.py')
+    
+    subprocess.run(['/usr/bin/python3', metadata_cleaner, '--source-dir', source_dir])
 
-    subprocess.run(['/usr/bin/python3', 'lyrics_staging.py', '--source-dir', source_dir])
+    subprocess.run(['/usr/bin/python3', lyrics_staging, '--source-dir', source_dir])
 
     # Support multiple audio formats
     extensions = (".mp3", ".flac", ".opus", ".m4a", ".ogg", ".wav", ".aiff", ".aac")

@@ -5,6 +5,9 @@ import shutil
 import argparse
 from typing import List, Dict, Optional
 
+# Add parent directory to path to import config
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 try:
     from mutagen.easyid3 import EasyID3
     from mutagen.flac import FLAC
