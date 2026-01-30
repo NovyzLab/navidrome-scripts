@@ -245,13 +245,35 @@ def add_metadata(filepath: str, artist: str, title: str, thumbnail_path: str = N
             audio.save()
             
         elif ext in ['.opus', '.ogg']:
-            # Use generic easy interface for Ogg formats
-            audio = MutagenFile(filepath, easy=True)
-            if audio is not None:
-                audio['artist'] = artist
-                audio['title'] = title
-                audio['album'] = title
-                audio.save()
+            # Opus/Ogg requires special handling for cover art
+            from mutagen.oggopus import OggOpus
+            from mutagen.oggvorbis import OggVorbis
+            import base64
+            
+            if ext == '.opus':
+                audio = OggOpus(filepath)
+            else:
+                audio = OggVorbis(filepath)
+            
+            audio['artist'] = artist
+            audio['title'] = title
+            audio['album'] = title
+            
+            # Add cover art using METADATA_BLOCK_PICTURE
+            if thumbnail_data:
+                # Create a FLAC-style picture block
+                pic = Picture()
+                pic.type = 3  # Front cover
+                pic.mime = thumbnail_mime
+                pic.desc = 'Cover'
+                pic.data = thumbnail_data
+                
+                # Encode as base64 for Ogg container
+                picture_data = pic.write()
+                encoded_data = base64.b64encode(picture_data).decode('ascii')
+                audio['metadata_block_picture'] = [encoded_data]
+            
+            audio.save()
             
         else:
             # Try generic mutagen file
