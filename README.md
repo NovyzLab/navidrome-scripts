@@ -30,7 +30,8 @@ navidrome-scripts/
 ├── data/                     # State/tracking files (gitignored)
 │   ├── failed_songs.json     # Songs that failed to download
 │   ├── processed_songs.json  # Successfully processed songs
-│   └── yt_downloaded.json    # YouTube download history
+│   ├── yt_downloaded.json    # YouTube download history
+│   └── sc_downloaded.json    # SoundCloud download history
 │
 ├── config.py                 # Centralized configuration loader
 ├── .env                      # Your configuration (gitignored)
