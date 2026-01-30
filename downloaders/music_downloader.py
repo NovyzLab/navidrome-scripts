@@ -7,6 +7,10 @@ import sys
 
 # Add parent directory to path to import config
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Project root for finding other scripts
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 import argparse
 import re
 import tempfile
@@ -525,8 +529,9 @@ def main():
         
     # After all downloads are complete, run the metadata cleaner script only if songs were downloaded
     if songs_downloaded:
+        post_download_script = os.path.join(PROJECT_ROOT, 'automation', 'post_download.py')
         print(f"All downloads complete. Running post_download.py for: {temp_download_dir}")
-        subprocess.run(['/usr/bin/python3', 'post_download.py', '--source-dir', temp_download_dir])
+        subprocess.run(['/usr/bin/python3', post_download_script, '--source-dir', temp_download_dir])
     else:
         print("No new songs were downloaded. Skipping metadata cleanup.")
         # Clean up the empty temp folder if no songs were downloaded
