@@ -39,7 +39,7 @@ from config import (
     DEEZER_BOT_USERNAME,
     TG_API_ID as API_ID,
     TG_API_HASH as API_HASH,
-    TG_SESSION_NAME as SESSION_NAME,
+    TG_SESSION_PATH as SESSION_NAME,
     validate_telegram_config
 )
 
