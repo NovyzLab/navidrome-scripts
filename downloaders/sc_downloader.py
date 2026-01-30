@@ -54,18 +54,36 @@ def save_downloaded_songs(data: Dict[str, Dict]):
 
 def clean_title(title: str) -> str:
     """
-    Cleans up a SoundCloud track title by removing common metadata.
+    Cleans up a SoundCloud track title by removing common metadata,
+    collaboration markers, and content in brackets/parentheses.
+    Uses aggressive filtering for better Deezer search results.
     """
-    patterns = [
-        r'\(.*?\)', r'\[.*?\]', r'free download', r'free dl',
-        r'out now', r'premiere', r'exclusive',
+    # --- Step 1: Aggressive Cutoff for Features/Collaborations (Case-Insensitive) ---
+    # Regex pattern to match collaboration markers - everything after is deleted
+    cutoff_terms = r'(\s*,\s*|\s*[\/\&\\]|\s+and\s+|\s+ft\.?\s*|\s+feat\.?\s*|\s+w\/\s*|\s+with\s*)'
+    
+    def apply_cutoff(text: str) -> str:
+        """Splits text by collaboration markers and returns only the first part."""
+        parts = re.split(cutoff_terms, text, 1, flags=re.IGNORECASE)
+        return parts[0].strip()
+
+    cleaned_title = apply_cutoff(title)
+
+    # --- Step 2: Remove bracketed/parenthesized content ---
+    cleaned_title = re.sub(r'\(.*?\)|\[.*?\]', '', cleaned_title).strip()
+    
+    # --- Step 3: Remove SoundCloud-specific junk ---
+    junk_patterns = [
+        r'free download', r'free dl', r'out now', r'premiere', r'exclusive',
     ]
-    cleaned_title = title
-    for pattern in patterns:
+    for pattern in junk_patterns:
         cleaned_title = re.sub(pattern, '', cleaned_title, flags=re.IGNORECASE).strip()
     
-    # Capitalize the first letter of each word
-    return ' '.join(word.capitalize() for word in cleaned_title.split())
+    # --- Step 4: Clean up any leftover symbols ---
+    cleaned_title = re.sub(r'^[–\-–\s]+|[–\-–\s]+$', '', cleaned_title).strip()
+    
+    # --- Step 5: Capitalize ---
+    return ' '.join(word.capitalize() for word in cleaned_title.split()) if cleaned_title else ""
 
 
 def get_songs_from_soundcloud(url: str) -> List[Dict]:
