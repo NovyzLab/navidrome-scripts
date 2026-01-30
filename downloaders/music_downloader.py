@@ -423,6 +423,11 @@ def main():
     parser = argparse.ArgumentParser(description='Download music from a selected source.')
     subparsers = parser.add_subparsers(dest='source', required=True, help='The source to fetch songs from.')
     
+    # Subparser for single track download
+    single_parser = subparsers.add_parser('single', help='Download a single track by artist and title.')
+    single_parser.add_argument('--artist', required=True, help='The artist name.')
+    single_parser.add_argument('--track', required=True, help='The track/song title.')
+    
     # Subparser for ListenBrainz
     listenbrainz_parser = subparsers.add_parser('listenbrainz', help='Download from ListenBrainz history or a specific playlist.')
     # The username and token are required for history but not for public playlists.
@@ -439,7 +444,14 @@ def main():
     
     new_songs = []
 
-    if args.source == 'listenbrainz':
+    if args.source == 'single':
+        # Single track mode - create a song entry from the provided artist and track
+        new_songs = [{
+            'artist': args.artist.strip(),
+            'title': args.track.strip(),
+            'youtube_url': 'N/A'
+        }]
+    elif args.source == 'listenbrainz':
         if args.playlist_url:
             new_songs = get_songs_from_listenbrainz_playlist(args.playlist_url)
         else:

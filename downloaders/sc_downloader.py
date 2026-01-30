@@ -2,6 +2,7 @@
 SoundCloud Music Downloader
 Downloads music from SoundCloud playlists/tracks using yt-dlp.
 Follows the same pattern as yt_downloader2.py with session-based temp folders.
+Tries Deezer first for better quality, falls back to SoundCloud.
 """
 import json
 import os
@@ -11,6 +12,7 @@ import sys
 import argparse
 import subprocess
 import uuid
+import asyncio
 from typing import List, Dict
 import re
 from datetime import datetime
@@ -19,7 +21,10 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # --- Configuration from .env ---
-from config import INCOMING_DIR as DOWNLOAD_DIR, _data_dir
+from config import INCOMING_DIR as DOWNLOAD_DIR, _data_dir, validate_telegram_config
+
+# Import Deezer download function from music_downloader
+from music_downloader import download_from_deezer_bot, SongNotFoundOnDeezerError, load_processed_songs
 
 # Tracking file for downloaded SoundCloud tracks (stored in data directory)
 SC_DOWNLOADED_FILE = str(_data_dir / 'sc_downloaded.json')
@@ -340,6 +345,26 @@ def download_from_soundcloud(artist: str, song_title: str, url: str, download_di
         traceback.print_exc()
         return False
 
+def try_deezer_first(artist: str, song_title: str, download_dir: str) -> bool:
+    """
+    Attempts to download from Deezer bot first (better quality).
+    Returns True if successful, False if we should fall back to SoundCloud.
+    """
+    try:
+        file_path = asyncio.run(download_from_deezer_bot(artist, song_title, download_dir))
+        if file_path:
+            print(f"✓ Downloaded from Deezer: {artist} - {song_title}")
+            return True
+        else:
+            print(f"✗ Not found on Deezer, falling back to SoundCloud...")
+            return False
+    except SongNotFoundOnDeezerError:
+        print(f"✗ Not found on Deezer, falling back to SoundCloud...")
+        return False
+    except Exception as e:
+        print(f"✗ Deezer error: {e}, falling back to SoundCloud...")
+        return False
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -367,6 +392,17 @@ Examples:
         print("No songs found. Exiting.")
         sys.exit(0)
 
+    # Load processed songs from music_downloader.py to avoid duplicates
+    processed_songs = load_processed_songs()
+    print(f"Loaded {len(downloaded_songs)} SoundCloud downloads and {len(processed_songs)} processed songs.")
+
+    # Check if Deezer/Telegram is configured
+    deezer_available = validate_telegram_config()
+    if deezer_available:
+        print("Deezer bot available - will try Deezer first for better quality.")
+    else:
+        print("Deezer bot not configured - downloading directly from SoundCloud.")
+
     songs_downloaded = False
     
     # Create a temporary folder for this download session
@@ -377,23 +413,47 @@ Examples:
 
     for song in new_songs:
         song_id = song['id']
+        artist = song['artist']
+        title = song['title']
+        song_key = f"{artist} - {title}"
+        
+        # Check if already downloaded via SoundCloud (by song_id)
         if song_id in downloaded_songs:
-            print(f"Skipping already downloaded: {song['artist']} - {song['title']}")
+            print(f"Skipping already downloaded (SoundCloud): {song_key}")
             continue
+        
+        # Check if already downloaded via music_downloader.py (by artist - title)
+        if song_key in processed_songs:
+            print(f"Skipping already downloaded (Deezer/other): {song_key}")
+            continue
+        success = False
+        source = None
 
-        success = download_from_soundcloud(song['artist'], song['title'], song['url'], temp_download_dir)
+        # Try Deezer first if available (better quality)
+        if deezer_available:
+            success = try_deezer_first(artist, title, temp_download_dir)
+            if success:
+                source = 'deezer'
+
+        # Fall back to SoundCloud if Deezer failed or not available
+        if not success:
+            success = download_from_soundcloud(artist, title, song['url'], temp_download_dir)
+            if success:
+                source = 'soundcloud'
+
         if success:
             songs_downloaded = True
             downloaded_songs[song_id] = {
-                'artist': song['artist'],
-                'title': song['title'],
+                'artist': artist,
+                'title': title,
                 'url': song['url'],
+                'source': source,
                 'downloaded_at': datetime.now().isoformat()
             }
             save_downloaded_songs(downloaded_songs)
         
         print("-" * 20)
-        time.sleep(2)  # Be nice to SoundCloud's servers
+        time.sleep(2)  # Be nice to servers
 
     # After all downloads are complete, run the post-processing script only if songs were downloaded
     if songs_downloaded:
