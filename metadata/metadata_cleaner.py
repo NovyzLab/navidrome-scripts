@@ -38,8 +38,9 @@ def update_and_clean_metadata(file_path: str):
             tag = audio.get(tag_name)
             if tag and isinstance(tag, list):
                 for artist in tag:
+                    # Include both regular comma and Unicode fullwidth comma (，)
                     cleaned_artist = re.sub(
-                        r'(\s+ft\.|\s+feat\.|\s*\/|\s*&|\s+and\s*|\s*,).+',
+                        r'(\s+ft\.|\s+feat\.|\s*\/|\s*&|\s+and\s*|\s*,|\s*，).+',
                         '', artist, flags=re.IGNORECASE
                     ).strip()
                     if cleaned_artist:
@@ -48,14 +49,12 @@ def update_and_clean_metadata(file_path: str):
         # --- Consolidate and update artist field ---
         if all_artists:
             final_artist = ", ".join(sorted(all_artists))
-            if isinstance(audio, EasyID3) or isinstance(audio, FLAC):
-                if audio.get('artist') != [final_artist]:
-                    audio['artist'] = [final_artist]
-                    tags_modified = True
-            elif isinstance(audio, MP4):
-                if audio.get('\xa9ART') != [final_artist]:
-                    audio['\xa9ART'] = [final_artist]
-                    tags_modified = True
+            current_artist = audio.get('artist')
+            
+            # Check if update is needed
+            if current_artist != [final_artist]:
+                audio['artist'] = [final_artist]
+                tags_modified = True
 
         # --- Remove unwanted tags ---
         unwanted_tags = [

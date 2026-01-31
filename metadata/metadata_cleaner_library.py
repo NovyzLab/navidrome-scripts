@@ -37,7 +37,8 @@ def update_and_clean_metadata(file_path: str):
         artist_tag = audio.get('artist')
         if artist_tag and isinstance(artist_tag, list):
             for artist in artist_tag:
-                cleaned_artist = re.sub(r'(\s+ft\.|\s+feat\.|\s*\/|\s*&|\s+and\s*|\s*,).+', '', artist, flags=re.IGNORECASE).strip()
+                # Include both regular comma and Unicode fullwidth comma (，)
+                cleaned_artist = re.sub(r'(\s+ft\.|\s+feat\.|\s*\/|\s*&|\s+and\s*|\s*,|\s*，).+', '', artist, flags=re.IGNORECASE).strip()
                 if cleaned_artist:
                     all_artists.add(cleaned_artist)
         
@@ -45,21 +46,20 @@ def update_and_clean_metadata(file_path: str):
         main_artist_tag = audio.get('main_artist')
         if main_artist_tag and isinstance(main_artist_tag, list):
             for artist in main_artist_tag:
-                cleaned_artist = re.sub(r'(\s+ft\.|\s+feat\.|\s*\/|\s*&|\s+and\s*|\s*,).+', '', artist, flags=re.IGNORECASE).strip()
+                # Include both regular comma and Unicode fullwidth comma (，)
+                cleaned_artist = re.sub(r'(\s+ft\.|\s+feat\.|\s*\/|\s*&|\s+and\s*|\s*,|\s*，).+', '', artist, flags=re.IGNORECASE).strip()
                 if cleaned_artist:
                     all_artists.add(cleaned_artist)
 
         # --- Consolidate and update the 'artist' tag ---
         if all_artists:
             final_artist_string = ", ".join(sorted(list(all_artists)))
-            if isinstance(audio, EasyID3) or isinstance(audio, FLAC):
-                if audio.get('artist') != [final_artist_string]:
-                    audio['artist'] = [final_artist_string]
-                    tags_modified = True
-            elif isinstance(audio, MP4):
-                if audio.get('\xa9ART') != [final_artist_string]:
-                    audio['\xa9ART'] = [final_artist_string]
-                    tags_modified = True
+            current_artist = audio.get('artist')
+            
+            # Check if update is needed (works for all formats including Opus/Ogg)
+            if current_artist != [final_artist_string]:
+                audio['artist'] = [final_artist_string]
+                tags_modified = True
 
         # --- Remove other conflicting or unwanted tags ---
         unwanted_tags = [
@@ -96,7 +96,7 @@ def main():
     # Iterate through the files on disk first
     for root, _, files in os.walk(DOWNLOAD_DIR):
         for file in files:
-            if file.lower().endswith(('.mp3', '.flac', '.m4a')):
+            if file.lower().endswith(('.mp3', '.flac', '.m4a', '.opus', '.ogg')):
                 file_path = os.path.join(root, file)
                 print(f"\nProcessing: {file_path}")
 
