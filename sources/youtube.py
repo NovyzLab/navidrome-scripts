@@ -47,6 +47,7 @@ class YouTubeSource(SourceBase):
             
             songs = []
             if 'entries' in info:
+                print(f"  DEBUG: Found {len(info['entries'])} entries in playlist")
                 for entry in info['entries']:
                     if not entry:
                         continue
@@ -60,18 +61,27 @@ class YouTubeSource(SourceBase):
                     # Fallback to channel name if no artist found
                     if not artist:
                         artist = entry.get('channel', 'Unknown Artist')
-                        if artist.endswith(' - Topic'):
+                        if artist and artist.endswith(' - Topic'):
                             artist = artist[:-8].strip()
                     
-                    if artist and title:
-                        songs.append(Song(
-                            artist=artist,
-                            title=title,
-                            source=self.source_type,
-                            source_id=video_id,
-                            source_url=f"https://www.youtube.com/watch?v={video_id}",
-                            extra={'channel': entry.get('channel', '')}
-                        ))
+                    # If still no artist, use "Unknown Artist"
+                    if not artist:
+                        artist = 'Unknown Artist'
+                    
+                    # If no title after cleaning, use original
+                    if not title:
+                        title = full_title
+                    
+                    songs.append(Song(
+                        artist=artist,
+                        title=title,
+                        source=self.source_type,
+                        source_id=video_id,
+                        source_url=f"https://www.youtube.com/watch?v={video_id}",
+                        extra={'channel': entry.get('channel', '')}
+                    ))
+            else:
+                print(f"  DEBUG: No 'entries' key in info. Keys: {info.keys()}")
             
             print(f"Found {len(songs)} songs from YouTube playlist.")
             return songs

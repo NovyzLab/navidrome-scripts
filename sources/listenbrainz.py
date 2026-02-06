@@ -62,15 +62,21 @@ class ListenBrainzSource(SourceBase):
             songs = []
             
             if 'track' in playlist_data.get('playlist', {}):
-                for item in playlist_data['playlist']['track']:
-                    artist = item.get('creator', '')
+                tracks = playlist_data['playlist']['track']
+                print(f"  DEBUG: Found {len(tracks)} tracks in playlist")
+                for item in tracks:
+                    original_artist = item.get('creator', '')
                     title = item.get('title', '')
                     
-                    if not artist or not title:
+                    if not title:
                         continue
                     
                     # Clean artist (handle multiple artists)
-                    artist = clean_artist_title(artist)
+                    artist = clean_artist_title(original_artist)
+                    
+                    # Fallback to original if cleaning emptied it
+                    if not artist:
+                        artist = original_artist or 'Unknown Artist'
                     
                     # Get recording MBID if available
                     recording_mbid = ''
@@ -90,6 +96,8 @@ class ListenBrainzSource(SourceBase):
                         source_url=None,  # No direct URL for ListenBrainz tracks
                         extra={'recording_mbid': recording_mbid}
                     ))
+            else:
+                print(f"  DEBUG: No 'track' key in playlist data")
             
             print(f"Found {len(songs)} songs from ListenBrainz playlist.")
             return songs

@@ -54,6 +54,7 @@ class SoundCloudSource(SourceBase):
             
             # Handle playlist/user (has entries)
             if 'entries' in info:
+                print(f"  DEBUG: Found {len(info['entries'])} entries")
                 for entry in info['entries']:
                     if not entry:
                         continue
@@ -62,6 +63,7 @@ class SoundCloudSource(SourceBase):
                         songs.append(song)
             else:
                 # Single track
+                print(f"  DEBUG: Single track mode")
                 song = self._extract_song_info(info)
                 if song:
                     songs.append(song)
@@ -81,19 +83,22 @@ class SoundCloudSource(SourceBase):
         track_id = entry.get('id', track_url)
         
         # Try to get artist from uploader
-        uploader = entry.get('uploader', '')
+        uploader = entry.get('uploader', 'Unknown Artist')
         
         # Get title and parse it
-        title = entry.get('title', '')
+        original_title = entry.get('title', '')
         
-        if not title:
+        if not original_title:
             return None
         
         # Check if title contains "artist - title" format
-        artist, song_title = self._parse_title(title, uploader)
+        artist, song_title = self._parse_title(original_title, uploader)
         
-        if not artist or not song_title:
-            return None
+        # Fallback to original values if cleaning produced empty strings
+        if not artist:
+            artist = uploader or 'Unknown Artist'
+        if not song_title:
+            song_title = original_title
         
         return Song(
             artist=artist,
