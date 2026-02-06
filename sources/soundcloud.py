@@ -55,12 +55,17 @@ class SoundCloudSource(SourceBase):
             # Handle playlist/user (has entries)
             if 'entries' in info:
                 print(f"  DEBUG: Found {len(info['entries'])} entries")
-                for entry in info['entries']:
+                for i, entry in enumerate(info['entries']):
                     if not entry:
+                        print(f"    Entry {i}: None/empty, skipping")
                         continue
+                    print(f"    Entry {i}: title='{entry.get('title', 'N/A')}', uploader='{entry.get('uploader', 'N/A')}'")
                     song = self._extract_song_info(entry)
                     if song:
                         songs.append(song)
+                        print(f"      → Added: {song.artist} - {song.title}")
+                    else:
+                        print(f"      → Skipped (no title)")
             else:
                 # Single track
                 print(f"  DEBUG: Single track mode")
