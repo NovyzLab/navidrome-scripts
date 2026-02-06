@@ -41,10 +41,12 @@ class SoundCloudSource(SourceBase):
         print(f"Fetching songs from SoundCloud: {url}...")
         
         try:
+            # Don't use extract_flat - we need full metadata (title, uploader)
             ydl_opts = {
-                'extract_flat': 'in_playlist',
                 'quiet': True,
                 'no_warnings': True,
+                'extract_flat': False,  # Get full metadata
+                'skip_download': True,
             }
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
