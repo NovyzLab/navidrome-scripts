@@ -6,39 +6,40 @@ A collection of Python scripts for automating music downloads, metadata manageme
 
 ```
 navidrome-scripts/
-├── downloaders/              # Music downloading scripts
-│   ├── music_downloader.py   # Main downloader (Deezer bot via Telegram)
-│   ├── song_downloader.py    # Single song downloader
-│   ├── yt_downloader2.py     # YouTube direct downloader
-│   └── sc_downloader.py      # SoundCloud downloader
+├── main.py                   # Main orchestrator (run this!)
 │
-├── metadata/                 # Metadata processing scripts
-│   ├── metadata_cleaner.py   # Clean metadata from incoming files
-│   ├── metadata_cleaner_library.py  # Clean metadata in library
-│   ├── metadata_recover.py   # Recover metadata from filenames
-│   ├── print_metadata.py     # Print metadata for a file
-│   └── strip_composer.py     # Remove composer tags
+├── sources/                  # Playlist/source fetchers
+│   ├── base.py               # Song dataclass & abstract base
+│   ├── youtube.py            # YouTube playlist fetcher
+│   ├── soundcloud.py         # SoundCloud playlist/user fetcher
+│   └── listenbrainz.py       # ListenBrainz playlist fetcher
 │
-├── lyrics/                   # Lyrics fetching scripts
+├── downloaders/              # Download implementations
+│   ├── base.py               # Abstract downloader base
+│   ├── deezer.py             # Deezer bot (Telegram) - FLAC
+│   ├── youtube.py            # YouTube direct (yt-dlp)
+│   └── soundcloud.py         # SoundCloud direct (yt-dlp)
+│
+├── metadata/                 # Metadata processing
+│   ├── metadata_cleaner.py   # Clean incoming file metadata
+│   ├── metadata_cleaner_library.py  # Clean library metadata
+│   └── print_metadata.py     # Debug: print file metadata
+│
+├── lyrics/                   # Lyrics fetching
 │   ├── get_lyrics.py         # Fetch lyrics for library
-│   └── lyrics_staging.py     # Fetch lyrics for incoming files
+│   └── lyrics_staging.py     # Fetch lyrics for incoming
 │
-├── automation/               # Automation & orchestration
-│   ├── watcher.py            # Continuous playlist watcher
-│   └── post_download.py      # Post-download processing pipeline
+├── automation/               # Automation
+│   ├── watcher.py            # Continuous monitoring
+│   └── post_download.py      # Post-download pipeline
 │
-├── data/                     # State/tracking files (gitignored)
-│   ├── failed_songs.json     # Songs that failed to download
-│   ├── processed_songs.json  # Successfully processed songs
-│   ├── yt_downloaded.json    # YouTube download history
-│   ├── sc_downloaded.json    # SoundCloud download history
-│   └── *.session             # Telegram session files
+├── data/                     # State files (gitignored)
+│   ├── processed_songs.json  # Download history
+│   └── *.session             # Telegram sessions
 │
-├── config.py                 # Centralized configuration loader
-├── .env                      # Your configuration (gitignored)
-├── .env.example              # Configuration template
-├── requirements.txt          # Python dependencies
-└── .gitignore
+├── config.py                 # Configuration loader
+├── .env                      # Your config (gitignored)
+└── .env.example              # Config template
 ```
 
 ## 🚀 Quick Start
@@ -46,49 +47,52 @@ navidrome-scripts/
 ### 1. Install Dependencies
 
 ```bash
-# Using pip
 pip install -r requirements.txt
-
-# On Arch Linux
-sudo pacman -S python-dotenv python-yt-dlp python-mutagen python-requests
 ```
 
 ### 2. Configure Environment
 
 ```bash
 cp .env.example .env
-# Edit .env with your settings
+# Edit .env with your playlist URLs and Telegram credentials
 ```
 
-### 3. Run Scripts
+### 3. Run
 
 ```bash
-# Download from a YouTube playlist (via Deezer bot)
-python downloaders/music_downloader.py youtube --playlist-url "YOUR_PLAYLIST_URL"
+# Run once (download from all configured sources)
+python main.py
 
-# Download from ListenBrainz playlist
-python downloaders/music_downloader.py listenbrainz --playlist-url "YOUR_PLAYLIST_URL"
+# Dry run (show what would be downloaded)
+python main.py --dry-run
 
-# Download from SoundCloud
-python downloaders/sc_downloader.py -l "SOUNDCLOUD_URL"
-
-# Run the watcher (continuous monitoring)
+# Continuous monitoring
 python automation/watcher.py
 ```
 
+## 🔄 How It Works
+
+1. **Fetch** - `main.py` fetches songs from all configured sources (YouTube, SoundCloud, ListenBrainz)
+2. **Deduplicate** - Songs are deduplicated by artist-title across all sources
+3. **Download** - Each song is downloaded using priority order:
+   - **Deezer** (FLAC, highest quality) via Telegram bot
+   - **Source-native** (YouTube/SoundCloud) as fallback
+4. **Process** - `post_download.py` cleans metadata, fetches lyrics, moves to library
+
 ## ⚙️ Configuration
 
-All configuration is managed via the `.env` file:
+Configure in `.env`:
 
 | Variable | Description |
 |----------|-------------|
-| `INCOMING_DIR` | Staging folder for new downloads |
-| `MUSIC_DIR` | Main music library folder |
-| `LYRICS_DIR` | Folder to store lyrics files |
-| `TG_API_ID` | Telegram API ID (from my.telegram.org) |
+| `INCOMING_DIR` | Staging folder for downloads |
+| `MUSIC_DIR` | Main music library |
+| `LYRICS_DIR` | Lyrics storage |
+| `YOUTUBE_PLAYLIST_URL` | YouTube playlist to monitor |
+| `SOUNDCLOUD_PLAYLIST_URL` | SoundCloud URL to monitor |
+| `LISTENBRAINZ_PLAYLIST_URL` | ListenBrainz playlist URL |
+| `TG_API_ID` | Telegram API ID |
 | `TG_API_HASH` | Telegram API Hash |
-| `TG_SESSION_NAME` | Telegram session name |
-| `CHECK_INTERVAL_SECONDS` | How often watcher checks (default: 15) |
 
 ## 📄 License
 

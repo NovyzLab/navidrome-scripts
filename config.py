@@ -43,9 +43,7 @@ DEEZER_BOT_USERNAME = os.getenv('DEEZER_BOT_USERNAME', '@deezload2bot')
 # ===================
 # Watcher Configuration
 # ===================
-MAIN_DOWNLOADER_SCRIPT = os.getenv('MAIN_DOWNLOADER_SCRIPT', '/root/scripts/music_downloader.py')
-YT_DOWNLOADER_SCRIPT = os.getenv('YT_DOWNLOADER_SCRIPT', '/root/scripts/yt_downloader2.py')
-SC_DOWNLOADER_SCRIPT = os.getenv('SC_DOWNLOADER_SCRIPT', '/root/scripts/sc_downloader.py')
+MAIN_SCRIPT = os.getenv('MAIN_SCRIPT', '')  # Path to main.py if running from different location
 CHECK_INTERVAL_SECONDS = int(os.getenv('CHECK_INTERVAL_SECONDS', '15'))
 
 # ===================
