@@ -88,10 +88,11 @@ class TidaloaderDownloader(DownloaderBase):
             )
             response.raise_for_status()
             
-            results = response.json()
+            data = response.json()
+            results = data.get('items', [])
             
             # Check if we have results
-            if not results or not isinstance(results, list) or len(results) == 0:
+            if not results:
                 raise SongNotFoundError(f"No results on Tidal for '{query}'")
             
             # Find best match (first result is usually best)
