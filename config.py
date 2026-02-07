@@ -55,6 +55,12 @@ YT2_PLAYLIST_URL = os.getenv('YT2_PLAYLIST_URL', '')
 SOUNDCLOUD_PLAYLIST_URL = os.getenv('SOUNDCLOUD_PLAYLIST_URL', '')
 
 # ===================
+# Tidaloader API (FLAC downloads)
+# ===================
+TIDALOADER_API_URL = os.getenv('TIDALOADER_API_URL', '')  # e.g., https://downloader.example.com
+TIDALOADER_AUTH = os.getenv('TIDALOADER_AUTH', '')  # e.g., Basic YWRtaW46MTIz
+
+# ===================
 # Miscellaneous
 # ===================
 USER_AGENT = os.getenv('USER_AGENT', 'MusicDownloadScript/1.0')

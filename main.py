@@ -29,6 +29,7 @@ from sources.base import Song, SourceType
 from sources.youtube import YouTubeSource
 from sources.soundcloud import SoundCloudSource
 from sources.listenbrainz import ListenBrainzSource
+from downloaders.tidaloader import TidaloaderDownloader
 from downloaders.deezer import DeezerDownloader
 from downloaders.youtube import YouTubeDownloader
 from downloaders.soundcloud import SoundCloudDownloader
@@ -94,7 +95,7 @@ def fetch_all_songs() -> List[Song]:
     return unique_songs
 
 
-async def download_song(song: Song, download_dir: str, downloaders: list) -> bool:
+async def download_song(song: Song, download_dir: str, downloaders: list) -> tuple[bool, bool]:
     """
     Try to download a song using available downloaders in priority order.
     
@@ -104,7 +105,7 @@ async def download_song(song: Song, download_dir: str, downloaders: list) -> boo
         downloaders: List of downloader instances, sorted by priority.
         
     Returns:
-        True if download succeeded, False otherwise.
+        Tuple of (success, skip_post_processing)
     """
     for downloader in downloaders:
         if not downloader.is_available():
@@ -112,15 +113,14 @@ async def download_song(song: Song, download_dir: str, downloaders: list) -> boo
         
         # For source-specific downloaders, check if they can handle this song
         if not downloader.can_handle(song):
-            # Deezer can handle any song, source-specific ones need matching source
-            if hasattr(downloader, 'can_handle') and not downloader.can_handle(song):
-                continue
+            continue
         
         try:
             result = await downloader.download(song, download_dir)
             if result:
                 print(f"✓ Downloaded via {downloader.name}: {song.artist} - {song.title}")
-                return True
+                skip_post = getattr(downloader, 'skip_post_processing', False)
+                return True, skip_post
         except SongNotFoundError as e:
             print(f"✗ {downloader.name}: {e}")
             continue
@@ -129,7 +129,7 @@ async def download_song(song: Song, download_dir: str, downloaders: list) -> boo
             continue
     
     print(f"✗ Failed to download: {song.artist} - {song.title}")
-    return False
+    return False, False
 
 
 def main():
@@ -180,9 +180,10 @@ Download priority: Deezer (FLAC) → Source-native (YouTube/SoundCloud)
     
     # Initialize downloaders (sorted by priority)
     downloaders = sorted([
-        DeezerDownloader(),
-        YouTubeDownloader(),
-        SoundCloudDownloader(),
+        TidaloaderDownloader(),  # Priority 5 - FLAC, direct to library
+        DeezerDownloader(),      # Priority 10 - FLAC via Telegram
+        YouTubeDownloader(),     # Priority 50 - fallback
+        SoundCloudDownloader(),  # Priority 50 - fallback
     ], key=lambda d: d.priority)
     
     # Show available downloaders
@@ -203,14 +204,17 @@ Download priority: Deezer (FLAC) → Source-native (YouTube/SoundCloud)
     print("=" * 60 + "\n")
     
     songs_downloaded = False
+    needs_post_processing = False
     
     for i, song in enumerate(new_songs, 1):
         print(f"[{i}/{len(new_songs)}] {song.artist} - {song.title}")
         
-        success = asyncio.run(download_song(song, temp_dir, downloaders))
+        success, skip_post = asyncio.run(download_song(song, temp_dir, downloaders))
         
         if success:
             songs_downloaded = True
+            if not skip_post:
+                needs_post_processing = True
         
         # Mark as processed
         processed[song.key] = {
@@ -223,17 +227,22 @@ Download priority: Deezer (FLAC) → Source-native (YouTube/SoundCloud)
         print("-" * 40)
         time.sleep(1)  # Be nice to servers
     
-    # Run post-processing
-    if songs_downloaded:
+    # Run post-processing only if needed
+    if needs_post_processing:
         print(f"\n🔄 Running post-download processing...")
         post_script = os.path.join(PROJECT_ROOT, 'automation', 'post_download.py')
         subprocess.run([sys.executable, post_script, '--source-dir', temp_dir])
+    elif songs_downloaded:
+        print("\n✓ All songs downloaded via Tidaloader (no post-processing needed)")
     else:
-        print("\nNo songs downloaded. Skipping post-processing.")
-        try:
+        print("\nNo songs downloaded.")
+    
+    # Cleanup empty temp dir
+    try:
+        if os.path.isdir(temp_dir) and not os.listdir(temp_dir):
             os.rmdir(temp_dir)
-        except OSError:
-            pass
+    except OSError:
+        pass
     
     print("\n✅ Done!")
 
