@@ -95,14 +95,41 @@ class TidaloaderDownloader(DownloaderBase):
             if not results:
                 raise SongNotFoundError(f"No results on Tidal for '{query}'")
             
-            # Find best match (first result is usually best)
-            track = results[0]
-            track_id = track.get('id')
-            track_title = track.get('title', '')
-            track_artist = track.get('artist', {}).get('name', '') if isinstance(track.get('artist'), dict) else track.get('artist', '')
+            # Find best match - must verify artist matches
+            track = None
+            track_id = None
+            track_title = ''
+            track_artist = ''
             
-            if not track_id:
-                raise SongNotFoundError("Track found but no ID available")
+            wanted_artist = song.artist.lower().strip()
+            wanted_title = song.title.lower().strip()
+            
+            for result in results:
+                r_artist = result.get('artist', {}).get('name', '') if isinstance(result.get('artist'), dict) else result.get('artist', '')
+                r_title = result.get('title', '')
+                r_artist_lower = r_artist.lower().strip()
+                r_title_lower = r_title.lower().strip()
+                
+                # Check artist match: exact, or one contains the other
+                artist_match = (
+                    wanted_artist == r_artist_lower or
+                    wanted_artist in r_artist_lower or
+                    r_artist_lower in wanted_artist
+                )
+                
+                if artist_match:
+                    track = result
+                    track_id = result.get('id')
+                    track_title = r_title
+                    track_artist = r_artist
+                    break
+            
+            if not track or not track_id:
+                # Show what we found for debugging
+                top = results[0]
+                top_artist = top.get('artist', {}).get('name', '') if isinstance(top.get('artist'), dict) else top.get('artist', '')
+                print(f"  No artist match. Top result was: {top_artist} - {top.get('title', '')}")
+                raise SongNotFoundError(f"No matching artist for '{song.artist}' on Tidal")
             
             print(f"  Found: {track_artist} - {track_title} (ID: {track_id})")
             
