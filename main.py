@@ -95,7 +95,7 @@ def fetch_all_songs() -> List[Song]:
     return unique_songs
 
 
-async def download_song(song: Song, download_dir: str, downloaders: list) -> tuple[bool, bool]:
+async def download_song(song: Song, download_dir: str, downloaders: list) -> tuple[bool, bool, str | None]:
     """
     Try to download a song using available downloaders in priority order.
     
@@ -105,7 +105,7 @@ async def download_song(song: Song, download_dir: str, downloaders: list) -> tup
         downloaders: List of downloader instances, sorted by priority.
         
     Returns:
-        Tuple of (success, skip_post_processing)
+        Tuple of (success, skip_post_processing, downloader_name)
     """
     for downloader in downloaders:
         if not downloader.is_available():
@@ -120,7 +120,7 @@ async def download_song(song: Song, download_dir: str, downloaders: list) -> tup
             if result:
                 print(f"✓ Downloaded via {downloader.name}: {song.artist} - {song.title}")
                 skip_post = getattr(downloader, 'skip_post_processing', False)
-                return True, skip_post
+                return True, skip_post, downloader.name
         except SongNotFoundError as e:
             print(f"✗ {downloader.name}: {e}")
             continue
@@ -129,7 +129,7 @@ async def download_song(song: Song, download_dir: str, downloaders: list) -> tup
             continue
     
     print(f"✗ Failed to download: {song.artist} - {song.title}")
-    return False, False
+    return False, False, None
 
 
 def main():
@@ -209,7 +209,7 @@ Download priority: Deezer (FLAC) → Source-native (YouTube/SoundCloud)
     for i, song in enumerate(new_songs, 1):
         print(f"[{i}/{len(new_songs)}] {song.artist} - {song.title}")
         
-        success, skip_post = asyncio.run(download_song(song, temp_dir, downloaders))
+        success, skip_post, downloaded_from = asyncio.run(download_song(song, temp_dir, downloaders))
         
         if success:
             songs_downloaded = True
@@ -217,11 +217,16 @@ Download priority: Deezer (FLAC) → Source-native (YouTube/SoundCloud)
                 needs_post_processing = True
         
         # Mark as processed
-        processed[song.key] = {
+        song_entry = {
             'timestamp': time.time(),
             'source': song.source.value,
             'status': 'downloaded' if success else 'failed'
         }
+        
+        if success and downloaded_from:
+            song_entry['downloaded_from'] = downloaded_from
+            
+        processed[song.key] = song_entry
         save_processed_songs(processed)
         
         print("-" * 40)
