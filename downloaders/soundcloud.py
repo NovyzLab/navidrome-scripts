@@ -76,6 +76,9 @@ class SoundCloudDownloader(DownloaderBase):
                 {
                     'key': 'FFmpegThumbnailsConvertor',
                     'format': 'jpg',
+                },
+                {
+                    'key': 'EmbedThumbnail',
                 }
             ],
         }
@@ -157,16 +160,9 @@ class SoundCloudDownloader(DownloaderBase):
                 audio['title'] = title
                 audio['album'] = title
                 
-                if thumbnail_data:
-                    pic = Picture()
-                    pic.type = 3
-                    pic.mime = thumbnail_mime
-                    pic.desc = 'Cover'
-                    pic.data = thumbnail_data
-                    
-                    picture_data = pic.write()
-                    encoded_data = base64.b64encode(picture_data).decode('ascii')
-                    audio['metadata_block_picture'] = [encoded_data]
+                # We skip embedding the thumbnail manually for Opus/Ogg files here, 
+                # because the yt-dlp EmbedThumbnail postprocessor natively handles it via FFmpeg
+                # which ensures maximum compatibility with players.
                 
                 audio.save()
             else:
