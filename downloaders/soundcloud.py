@@ -4,6 +4,9 @@ SoundCloud downloader module - downloads music from SoundCloud.
 import os
 import sys
 import base64
+import glob
+from urllib.parse import urlparse
+from urllib.request import urlopen
 from typing import Optional
 
 # Add parent directory to path
@@ -96,30 +99,32 @@ class SoundCloudDownloader(DownloaderBase):
                     print(f"Could not find downloaded file")
                     return None
                 
-                # Find whatever thumbnail yt-dlp produced via glob (loose match)
-                import glob
+                # Find whatever thumbnail yt-dlp produced via glob.
                 thumbnail_path = None
                 
-                # We use a looser prefix match using safe_artist to accommodate older yt-dlp 
-                # versions that might name the thumbnail slightly differently than outtmpl.
-                prefix_pattern = os.path.join(download_dir, f"{safe_artist}*.*")
-                potential_thumbs = glob.glob(prefix_pattern)
+                # Try both the exact base name and a looser artist prefix; some yt-dlp
+                # versions use different thumbnail naming for SoundCloud.
+                potential_thumbs = []
+                potential_thumbs.extend(glob.glob(base_name + ".*"))
+                potential_thumbs.extend(glob.glob(os.path.join(download_dir, f"{safe_artist}*.*")))
                 
                 # Filter strictly for standard image extensions
                 potential_thumbs = [p for p in potential_thumbs if p.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.jfif'))]
+                potential_thumbs = list(dict.fromkeys(potential_thumbs))
                 
-                # Ultimate fallback: If yt-dlp completely failed to write the thumbnail to disk 
-                # on this OS version, manually download the thumbnail URL it scraped!
-                if not potential_thumbs and info.get('thumbnail'):
-                    print(f"  yt-dlp thumbnail skipped. Manually downloading {info.get('thumbnail')}...")
+                # Ultimate fallback: if yt-dlp did not write a thumbnail file, manually
+                # download one from any thumbnail-like URL in the metadata.
+                thumbnail_url = self._extract_thumbnail_url(info)
+                if not potential_thumbs and thumbnail_url:
+                    print(f"  yt-dlp thumbnail skipped. Manually downloading {thumbnail_url}...")
                     try:
-                        import requests
-                        img_resp = requests.get(info['thumbnail'], timeout=10)
-                        if img_resp.status_code == 200:
-                            # Assume jpg but Mutagen handles MIME type logic later anyway based on header
-                            manual_path = os.path.join(download_dir, f"{safe_artist} - {safe_title}_fallback.jpg")
-                            with open(manual_path, 'wb') as f:
-                                f.write(img_resp.content)
+                        manual_path = self._download_thumbnail_fallback(
+                            thumbnail_url,
+                            download_dir,
+                            safe_artist,
+                            safe_title
+                        )
+                        if manual_path:
                             potential_thumbs.append(manual_path)
                     except Exception as e:
                         print(f"  Failed manual download: {e}")
@@ -205,3 +210,43 @@ class SoundCloudDownloader(DownloaderBase):
                     
         except Exception as e:
             print(f"Error adding metadata: {e}")
+
+    def _extract_thumbnail_url(self, info: dict) -> Optional[str]:
+        """Find the best available thumbnail URL from yt-dlp metadata."""
+        direct_thumbnail = info.get('thumbnail')
+        if direct_thumbnail:
+            return direct_thumbnail
+
+        thumbnails = info.get('thumbnails')
+        if isinstance(thumbnails, list) and thumbnails:
+            for entry in reversed(thumbnails):
+                if isinstance(entry, dict) and entry.get('url'):
+                    return entry['url']
+
+        artwork_url = info.get('artwork_url')
+        if artwork_url:
+            return artwork_url
+
+        return None
+
+    def _download_thumbnail_fallback(
+        self,
+        thumbnail_url: str,
+        download_dir: str,
+        safe_artist: str,
+        safe_title: str,
+    ) -> Optional[str]:
+        """Download a fallback thumbnail when yt-dlp doesn't write one."""
+        parsed = urlparse(thumbnail_url)
+        extension = os.path.splitext(parsed.path)[1].lower()
+        if extension not in ('.jpg', '.jpeg', '.png', '.webp', '.jfif'):
+            extension = '.jpg'
+
+        manual_path = os.path.join(download_dir, f"{safe_artist} - {safe_title}_fallback{extension}")
+        with urlopen(thumbnail_url, timeout=10) as response:
+            data = response.read()
+            if not data:
+                return None
+            with open(manual_path, 'wb') as f:
+                f.write(data)
+        return manual_path
