@@ -72,10 +72,6 @@ class SoundCloudDownloader(DownloaderBase):
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'opus',
                     'preferredquality': '0',  # Best quality
-                },
-                {
-                    'key': 'FFmpegThumbnailsConvertor',
-                    'format': 'jpg',
                 }
             ],
         }

@@ -66,10 +66,6 @@ class YouTubeDownloader(DownloaderBase):
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
                     'preferredquality': '192'
-                },
-                {
-                    'key': 'FFmpegThumbnailsConvertor',
-                    'format': 'jpg',
                 }
             ],
             'outtmpl': output_template,
@@ -141,10 +137,17 @@ class YouTubeDownloader(DownloaderBase):
                 audio.tags.add(TDRC(encoding=3, text=upload_date))
             
             if thumbnail_path and os.path.exists(thumbnail_path):
+                thumb_ext = os.path.splitext(thumbnail_path)[1].lower()
+                thumbnail_mime = 'image/jpeg'
+                if thumb_ext == '.png':
+                    thumbnail_mime = 'image/png'
+                elif thumb_ext == '.webp':
+                    thumbnail_mime = 'image/webp'
+                    
                 with open(thumbnail_path, 'rb') as f:
                     audio.tags.add(APIC(
                         encoding=3,
-                        mime='image/jpeg',
+                        mime=thumbnail_mime,
                         type=3,
                         desc='Cover',
                         data=f.read()
