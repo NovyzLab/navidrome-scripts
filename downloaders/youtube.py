@@ -84,8 +84,22 @@ class YouTubeDownloader(DownloaderBase):
                 filename = ydl.prepare_filename(info)
                 mp3_filename = os.path.splitext(filename)[0] + '.mp3'
                 
-                # Get thumbnail path for metadata (now forced to .jpg by FFmpegThumbnailsConvertor)
+                # Get thumbnail path for metadata (prioritized to .jpg, fallback to .webp)
                 thumbnail_path = os.path.splitext(filename)[0] + '.jpg'
+                if not os.path.exists(thumbnail_path):
+                    print(f"  Warning: .jpg thumbnail not found. Falling back...")
+                    fallback_paths = [
+                        os.path.splitext(filename)[0] + '.webp',
+                        os.path.splitext(filename)[0] + '.png'
+                    ]
+                    for path in fallback_paths:
+                        if os.path.exists(path):
+                            thumbnail_path = path
+                            print(f"  Found fallback thumbnail: {os.path.splitext(path)[1]}")
+                            break
+                    else:
+                        thumbnail_path = None
+                        print(f"  ❌ No thumbnail found at all!")
                 
                 # Add metadata
                 upload_date = info.get('upload_date', '')
