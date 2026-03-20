@@ -111,10 +111,12 @@ class SoundCloudDownloader(DownloaderBase):
                 # Filter strictly for standard image extensions
                 potential_thumbs = [p for p in potential_thumbs if p.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.jfif'))]
                 potential_thumbs = list(dict.fromkeys(potential_thumbs))
+                print(f"  [thumb-debug] glob matches: {potential_thumbs}")
                 
                 # Ultimate fallback: if yt-dlp did not write a thumbnail file, manually
                 # download one from any thumbnail-like URL in the metadata.
-                thumbnail_url = self._extract_thumbnail_url(info)
+                thumbnail_url = self._extract_thumbnail_url(info, song)
+                print(f"  [thumb-debug] selected fallback URL: {thumbnail_url}")
                 if not potential_thumbs and thumbnail_url:
                     print(f"  yt-dlp thumbnail skipped. Manually downloading {thumbnail_url}...")
                     try:
@@ -124,6 +126,7 @@ class SoundCloudDownloader(DownloaderBase):
                             safe_artist,
                             safe_title
                         )
+                        print(f"  [thumb-debug] manual download path: {manual_path}")
                         if manual_path:
                             potential_thumbs.append(manual_path)
                     except Exception as e:
@@ -211,23 +214,48 @@ class SoundCloudDownloader(DownloaderBase):
         except Exception as e:
             print(f"Error adding metadata: {e}")
 
-    def _extract_thumbnail_url(self, info: dict) -> Optional[str]:
+    def _extract_thumbnail_url(self, info: dict, song: Song) -> Optional[str]:
         """Find the best available thumbnail URL from yt-dlp metadata."""
-        direct_thumbnail = info.get('thumbnail')
+        direct_thumbnail = self._normalize_thumbnail_url(info.get('thumbnail'))
+        raw_thumbnails = info.get('thumbnails')
+        if isinstance(raw_thumbnails, list):
+            thumb_urls = [t.get('url') for t in raw_thumbnails if isinstance(t, dict) and t.get('url')]
+        else:
+            thumb_urls = []
+        raw_artwork = info.get('artwork_url')
+        source_thumb = song.extra.get('thumbnail')
+        print(f"  [thumb-debug] info.thumbnail={info.get('thumbnail')}")
+        print(f"  [thumb-debug] info.thumbnails urls={thumb_urls}")
+        print(f"  [thumb-debug] info.artwork_url={raw_artwork}")
+        print(f"  [thumb-debug] song.extra.thumbnail={source_thumb}")
         if direct_thumbnail:
             return direct_thumbnail
 
-        thumbnails = info.get('thumbnails')
+        thumbnails = raw_thumbnails
         if isinstance(thumbnails, list) and thumbnails:
             for entry in reversed(thumbnails):
-                if isinstance(entry, dict) and entry.get('url'):
-                    return entry['url']
+                if isinstance(entry, dict):
+                    thumb_url = self._normalize_thumbnail_url(entry.get('url'))
+                    if thumb_url:
+                        return thumb_url
 
-        artwork_url = info.get('artwork_url')
+        artwork_url = self._normalize_thumbnail_url(info.get('artwork_url'))
         if artwork_url:
             return artwork_url
 
+        source_thumbnail = self._normalize_thumbnail_url(song.extra.get('thumbnail'))
+        if source_thumbnail:
+            return source_thumbnail
+
         return None
+
+    def _normalize_thumbnail_url(self, thumbnail_url: Optional[str]) -> Optional[str]:
+        """Normalize potentially protocol-relative thumbnail URLs."""
+        if not thumbnail_url:
+            return None
+        if thumbnail_url.startswith('//'):
+            return f"https:{thumbnail_url}"
+        return thumbnail_url
 
     def _download_thumbnail_fallback(
         self,
