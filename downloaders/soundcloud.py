@@ -96,18 +96,18 @@ class SoundCloudDownloader(DownloaderBase):
                     print(f"Could not find downloaded file")
                     return None
                 
-                # Get thumbnail (now prioritized to .jpg, but fallback to .webp/.png)
-                thumbnail_path = base_name + '.jpg'
-                if not os.path.exists(thumbnail_path):
-                    print(f"  Warning: .jpg thumbnail not found. Falling back to other formats...")
-                    for ext in ['.webp', '.png']:
-                        if os.path.exists(base_name + ext):
-                            thumbnail_path = base_name + ext
-                            print(f"  Found fallback thumbnail: {ext}")
-                            break
-                    else:
-                        thumbnail_path = None
-                        print(f"  ❌ No thumbnail found at all!")
+                # Find whatever thumbnail yt-dlp produced via glob
+                import glob
+                thumbnail_path = None
+                potential_thumbs = glob.glob(base_name + ".*")
+                # Filter out known audio extensions
+                potential_thumbs = [p for p in potential_thumbs if not p.lower().endswith(('.opus', '.m4a', '.webm', '.mp3', '.ogg', '.wav', '.flac'))]
+                
+                if potential_thumbs:
+                    thumbnail_path = potential_thumbs[0]
+                    print(f"  Found thumbnail: {os.path.basename(thumbnail_path)}")
+                else:
+                    print(f"  ❌ No thumbnail found at all! Searched for {base_name}.*")
                 
                 # Add metadata
                 self._add_metadata(opus_file, song.artist, song.title, thumbnail_path)

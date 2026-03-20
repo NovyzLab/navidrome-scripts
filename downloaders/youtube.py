@@ -80,22 +80,19 @@ class YouTubeDownloader(DownloaderBase):
                 filename = ydl.prepare_filename(info)
                 mp3_filename = os.path.splitext(filename)[0] + '.mp3'
                 
-                # Get thumbnail path for metadata (prioritized to .jpg, fallback to .webp)
-                thumbnail_path = os.path.splitext(filename)[0] + '.jpg'
-                if not os.path.exists(thumbnail_path):
-                    print(f"  Warning: .jpg thumbnail not found. Falling back...")
-                    fallback_paths = [
-                        os.path.splitext(filename)[0] + '.webp',
-                        os.path.splitext(filename)[0] + '.png'
-                    ]
-                    for path in fallback_paths:
-                        if os.path.exists(path):
-                            thumbnail_path = path
-                            print(f"  Found fallback thumbnail: {os.path.splitext(path)[1]}")
-                            break
-                    else:
-                        thumbnail_path = None
-                        print(f"  ❌ No thumbnail found at all!")
+                # Find whatever thumbnail yt-dlp produced via glob
+                import glob
+                thumbnail_path = None
+                base_name = os.path.splitext(filename)[0]
+                potential_thumbs = glob.glob(base_name + ".*")
+                # Filter out known audio extensions
+                potential_thumbs = [p for p in potential_thumbs if not p.lower().endswith(('.opus', '.m4a', '.webm', '.mp3', '.ogg', '.wav', '.flac'))]
+                
+                if potential_thumbs:
+                    thumbnail_path = potential_thumbs[0]
+                    print(f"  Found thumbnail: {os.path.basename(thumbnail_path)}")
+                else:
+                    print(f"  ❌ No thumbnail found at all! Searched for {base_name}.*")
                 
                 # Add metadata
                 upload_date = info.get('upload_date', '')
