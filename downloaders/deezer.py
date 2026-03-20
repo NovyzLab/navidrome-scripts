@@ -39,7 +39,7 @@ class DeezerDownloader(DownloaderBase):
     
     @property
     def priority(self) -> int:
-        return 10  # Highest priority (best quality)
+        return 10  # High priority (flac quality)
     
     def is_available(self) -> bool:
         """Check if Telegram credentials are configured."""
@@ -80,7 +80,7 @@ class DeezerDownloader(DownloaderBase):
                         query=query,
                         offset=''
                     )),
-                    timeout=10
+                    timeout=20
                 )
             except asyncio.TimeoutError:
                 raise SongNotFoundError("Deezer bot timeout")

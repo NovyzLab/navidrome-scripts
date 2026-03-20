@@ -7,29 +7,37 @@ from sources.base import Song, SourceType
 
 async def test():
     dl = SoundCloudDownloader()
-    
     song = Song(
-        artist="Test Artist",
-        title="Test Title",
+        artist="beansclub",
+        title="i'll never find this sound of silence",
         source=SourceType.SOUNDCLOUD,
         source_id="test",
-        source_url="https://soundcloud.com/beansclub/illneverfindthissoundofsilence" # Random valid URL
+        source_url="https://soundcloud.com/beansclub/illneverfindthissoundofsilence"
     )
-    result = await dl.download(song, "/tmp/sc_test")
-    print(f"Downloaded to {result}")
+    
+    print("Testing SoundCloud Downloader...")
+    result = await dl.download(song, "testdir")
     
     if result and os.path.exists(result):
-        from mutagen.oggopus import OggOpus
-        audio = OggOpus(result)
-        print("KEYS:", audio.keys())
-        if 'metadata_block_picture' in audio:
-            print("PIC data present in Mutagen!")
-            print("Len:", len(audio['metadata_block_picture'][0]))
-        else:
-            print("NO PIC in Mutagen!")
+        print(f"\nDownload completed: {result}")
+        print("\nChecking for embedded cover art...")
+        
+        try:
+            from mutagen.oggopus import OggOpus
+            audio = OggOpus(result)
             
-        # Verify with ffprobe
-        print("\nVerifying with ffprobe:")
-        os.system(f"ffprobe -v quiet -show_streams -show_format '{result}' | grep -i attached_pic -B 2 -A 2")
+            if 'metadata_block_picture' in audio:
+                print("✅ YES! Found metadata_block_picture in the Opus file!")
+                # Print a bit of the base64 string
+                pic_data = audio['metadata_block_picture'][0]
+                print(f"   Cover art embedded successfully (Length: {len(pic_data)} bytes)")
+            else:
+                print("❌ NO cover art found in metadata_block_picture!")
+                print("Current keys:", audio.keys())
+        except Exception as e:
+            print(f"Error reading metadata: {e}")
+    else:
+        print("\nDownload failed or file not found.")
 
-asyncio.run(test())
+if __name__ == "__main__":
+    asyncio.run(test())
