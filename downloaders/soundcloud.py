@@ -67,11 +67,17 @@ class SoundCloudDownloader(DownloaderBase):
             'retries': 5,
             'quiet': True,
             'writethumbnail': True,
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'opus',
-                'preferredquality': '0',  # Best quality
-            }],
+            'postprocessors': [
+                {
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'opus',
+                    'preferredquality': '0',  # Best quality
+                },
+                {
+                    'key': 'FFmpegThumbnailsConvertor',
+                    'format': 'jpg',
+                }
+            ],
         }
         
         try:
@@ -94,12 +100,10 @@ class SoundCloudDownloader(DownloaderBase):
                     print(f"Could not find downloaded file")
                     return None
                 
-                # Get thumbnail
-                thumbnail_path = None
-                for ext in ['.webp', '.jpg', '.png']:
-                    if os.path.exists(base_name + ext):
-                        thumbnail_path = base_name + ext
-                        break
+                # Get thumbnail (now forced to .jpg by FFmpegThumbnailsConvertor)
+                thumbnail_path = base_name + '.jpg'
+                if not os.path.exists(thumbnail_path):
+                    thumbnail_path = None
                 
                 # Add metadata
                 self._add_metadata(opus_file, song.artist, song.title, thumbnail_path)

@@ -90,13 +90,14 @@ def clean_artist_title(text: str) -> str:
     """
     import re
     
+    # Remove bracketed/parenthesized content FIRST
+    # This prevents splitting on symbols (like /) that are inside parentheses
+    cleaned = re.sub(r'\(.*?\)|\[.*?\]', '', text).strip()
+    
     # Cutoff at collaboration markers
     cutoff_terms = r'(\s*,\s*|\s*，\s*|\s*[\/\&\\]|\s+and\s+|\s+ft\.?\s*|\s+feat\.?\s*|\s+w\/\s*|\s+with\s*)'
-    parts = re.split(cutoff_terms, text, 1, flags=re.IGNORECASE)
+    parts = re.split(cutoff_terms, cleaned, 1, flags=re.IGNORECASE)
     cleaned = parts[0].strip()
-    
-    # Remove bracketed/parenthesized content
-    cleaned = re.sub(r'\(.*?\)|\[.*?\]', '', cleaned).strip()
     
     # Remove common junk patterns
     junk_patterns = [

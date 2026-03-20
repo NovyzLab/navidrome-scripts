@@ -61,11 +61,17 @@ class YouTubeDownloader(DownloaderBase):
         
         ydl_opts = {
             'format': 'bestaudio/best',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192'
-            }],
+            'postprocessors': [
+                {
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192'
+                },
+                {
+                    'key': 'FFmpegThumbnailsConvertor',
+                    'format': 'jpg',
+                }
+            ],
             'outtmpl': output_template,
             'retries': 5,
             'quiet': True,
@@ -78,10 +84,8 @@ class YouTubeDownloader(DownloaderBase):
                 filename = ydl.prepare_filename(info)
                 mp3_filename = os.path.splitext(filename)[0] + '.mp3'
                 
-                # Get thumbnail path for metadata
-                thumbnail_path = os.path.splitext(filename)[0] + '.webp'
-                if not os.path.exists(thumbnail_path):
-                    thumbnail_path = os.path.splitext(filename)[0] + '.jpg'
+                # Get thumbnail path for metadata (now forced to .jpg by FFmpegThumbnailsConvertor)
+                thumbnail_path = os.path.splitext(filename)[0] + '.jpg'
                 
                 # Add metadata
                 upload_date = info.get('upload_date', '')
