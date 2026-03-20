@@ -70,9 +70,6 @@ class YouTubeDownloader(DownloaderBase):
                 {
                     'key': 'FFmpegThumbnailsConvertor',
                     'format': 'jpg',
-                },
-                {
-                    'key': 'EmbedThumbnail',
                 }
             ],
             'outtmpl': output_template,
@@ -129,8 +126,15 @@ class YouTubeDownloader(DownloaderBase):
             if upload_date:
                 audio.tags.add(TDRC(encoding=3, text=upload_date))
             
-            # We skip embedding the thumbnail manually here because the yt-dlp 
-            # EmbedThumbnail postprocessor handles it correctly natively.
+            if thumbnail_path and os.path.exists(thumbnail_path):
+                with open(thumbnail_path, 'rb') as f:
+                    audio.tags.add(APIC(
+                        encoding=3,
+                        mime='image/jpeg',
+                        type=3,
+                        desc='Cover',
+                        data=f.read()
+                    ))
             
             audio.save()
         except Exception as e:
