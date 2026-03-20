@@ -87,6 +87,23 @@ class YouTubeDownloader(DownloaderBase):
                 potential_thumbs = glob.glob(base_name + ".*")
                 # Filter out known audio extensions
                 potential_thumbs = [p for p in potential_thumbs if not p.lower().endswith(('.opus', '.m4a', '.webm', '.mp3', '.ogg', '.wav', '.flac'))]
+                potential_thumbs = [p for p in potential_thumbs if p.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.jfif'))]
+                
+                # Ultimate fallback: If yt-dlp completely failed to write the thumbnail to disk 
+                # on this OS version, manually download the thumbnail URL it scraped!
+                if not potential_thumbs and info.get('thumbnail'):
+                    print(f"  yt-dlp thumbnail skipped. Manually downloading {info.get('thumbnail')}...")
+                    try:
+                        import requests
+                        img_resp = requests.get(info['thumbnail'], timeout=10)
+                        if img_resp.status_code == 200:
+                            # Assume jpg but Mutagen handles MIME type logic later anyway based on header
+                            manual_path = base_name + "_fallback.jpg"
+                            with open(manual_path, 'wb') as f:
+                                f.write(img_resp.content)
+                            potential_thumbs.append(manual_path)
+                    except Exception as e:
+                        print(f"  Failed manual download: {e}")
                 
                 if potential_thumbs:
                     thumbnail_path = potential_thumbs[0]
